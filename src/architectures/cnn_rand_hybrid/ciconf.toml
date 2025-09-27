@@ -1,0 +1,5 @@
+[network]
+layer_span_details = [[[6,1,1], [1,1,1]], [[3,2,1], [1,1,1]], [[1,3,2], [1,2,1]], [[1,2,3], [1,1,2]], [[1,2,3], [1,1,2]], [[1,3,2], [1,2,1]]]
+# We are also going to need to make sure layer sizes are consistent with the span details above, this means rewriting default config
+#layer_sizes = [2352, 756, 351, 156, 66, 25, 8]
+layer_sizes = [2352, 756, 8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8]

@@ -1,0 +1,15 @@
+[package]
+name = "lutnets"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+csv="*"
+bitvec ="*"
+rayon="*"
+rand = "*"
+rand_xoshiro = "*"
+serde = { version = "*", features = ["derive"] }
+bincode = {version = "*", features = ["serde"]}
+serde-big-array="*"
+config = { version = "*", features = ["toml"] }
