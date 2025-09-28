@@ -2,7 +2,7 @@ use crate::{netcore::*, settings::*};
 use rand::prelude::*;
 use rand_xoshiro::Xoshiro256PlusPlus;
 
-pub fn calculate_accuracy(y: &[u8], predicted_labels: &[u8]) -> f32 {
+pub fn calculate_accuracy(y: &[usize], predicted_labels: &[usize]) -> f32 {
     assert_eq!(
         y.len(),
         predicted_labels.len(),
@@ -19,7 +19,7 @@ pub fn calculate_accuracy(y: &[u8], predicted_labels: &[u8]) -> f32 {
     correct_predictions as f32 / y.len() as f32
 }
 
-pub fn get_ix(cfg: &Configuration, target: u8) -> Option<u8> {
+pub fn get_ix(cfg: &Configuration, target: usize) -> Option<u8> {
     // Given target embedding, return the corresponding index (which is the label)
     cfg.network
         .output_embedding
@@ -62,26 +62,26 @@ pub fn create_pseudorandom_lut_generator(
     if let Some(lut_bank) = lut_bank_opt {
         let lut_bank_size = lut_bank.len();
         let ltbank = lut_bank.clone();
-        if lut_bank_size == 16 {
-            Box::new(std::iter::repeat(()).flat_map(move |_| {
+        match lut_bank_size {
+            16 => Box::new(std::iter::repeat(()).flat_map(move |_| {
                 let chunk = rng_luts.next_u64();
                 let items: [u64; 16] =
                     std::array::from_fn(|i| ltbank[((chunk >> (i * 4)) & 0xF) as usize].clone());
                 items.into_iter()
-            }))
-        } else if lut_bank_size == 256 {
-            Box::new(std::iter::repeat(()).flat_map(move |_| {
+            })),
+
+            256 => Box::new(std::iter::repeat(()).flat_map(move |_| {
                 let chunk = rng_luts.next_u64();
                 let items: [u64; 8] = std::array::from_fn(|i| {
                     let index = ((chunk >> (i * 8)) & 0xFF) as usize;
                     ltbank[index].clone()
                 });
                 items.into_iter()
-            }))
-        } else {
-            Box::new(std::iter::from_fn(move || {
+            })),
+
+            _ => Box::new(std::iter::from_fn(move || {
                 Some(ltbank[rng_luts.random_range(0..lut_bank_size)])
-            }))
+            })),
         }
     } else {
         Box::new(std::iter::from_fn(move || Some(rng_luts.next_u64())))
@@ -111,7 +111,6 @@ pub fn pseudo_8bit_generator() -> impl Iterator<Item = u8> {
         (0..8).map(move |i| (chunk >> (i * 8)) as u8 & 0xFF)
     })
 }
-
 
 #[cfg(test)]
 mod tests {

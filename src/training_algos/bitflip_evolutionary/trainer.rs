@@ -9,11 +9,10 @@ pub fn train(
     ltnet: &mut LUTNet,
     cfg: &Configuration,
     databits: &BitVec<u8, Msb0>,
-    labels: &[u8],
+    labels: &[usize],
     corruption_ratio: f32,
     lut_sampling_depth: usize,
     epochs: usize,
-    write_freq: usize,
     model_filename: &str,
 ) {
     let start_time = Instant::now();
@@ -93,11 +92,14 @@ pub fn iterate_corruptions(
     ltnet: &mut LUTNet,
     cfg: &Configuration,
     dbv: &mut BitVec<u8, Msb0>,
-    y: &[u8],
+    y: &[usize],
     corruption_ratio: f32,
     iterations: usize,
 ) -> Option<(usize, Vec<Node>)> {
-    assert!(cfg.network.lut_bank_size <=0, "Cannot run this algorithm on network with lut bank.");
+    assert!(
+        cfg.network.lut_bank_size <= 0,
+        "Cannot run this algorithm on network with lut bank."
+    );
     let mut rng = Xoshiro256PlusPlus::from_rng(&mut rand::rng());
     let num_to_corrupt = (cfg.derived.network_size as f32 * corruption_ratio).round() as usize;
     // println!("Num of nodes to corrupt: {}", num_to_corrupt);
@@ -116,6 +118,7 @@ pub fn iterate_corruptions(
             },
             |(pseudo_6bit_generator, local_dbv), _| {
                 let mutated_nodes = ltnet.apply_gates_with_bitflips(
+                    cfg,
                     local_dbv,
                     &node_idxs_to_corrupt,
                     pseudo_6bit_generator,

@@ -300,7 +300,7 @@ mod tests {
 
     #[test]
     fn gate_iterator_test() {
-        let cfg = get_cfg();
+        let cfg = get_cfg(None);
 
         let mut iterator = GateIterator::new(cfg);
         let mut i: usize = 0;
@@ -350,7 +350,7 @@ mod tests {
     }
     #[test]
     fn layer_gate_iterator_test() {
-        let cfg = get_cfg();
+        let cfg = get_cfg(None);
         let mut iterator = LayerGateIterator::new(cfg, 0);
         let mut i: usize = 0;
         let mut val = iterator.next();
@@ -409,7 +409,7 @@ mod tests {
 
     #[test]
     fn gate_and_layergate_iterators_are_the_same() {
-        let cfg = get_cfg();
+        let cfg = get_cfg(None);
         // let (mut node_index, mut img_num_in_batch, mut current_layer, mut bitvec_index, mut readbit_offset) = iterator.next().unwrap();
         let mut layer: usize = 0;
         let mut iterator1 = GateIterator::new(cfg);

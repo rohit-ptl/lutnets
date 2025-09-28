@@ -1,6 +1,6 @@
 use config::{Config, ConfigError, File};
 use serde::Deserialize;
-use std::sync::OnceLock;
+use std::{path::PathBuf, sync::OnceLock};
 
 pub static APP_CFG: OnceLock<Configuration> = OnceLock::new();
 
@@ -24,12 +24,12 @@ pub struct Data {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Network {
-    pub output_embedding: Vec<u8>,
+    pub output_embedding: Vec<usize>,
     pub layer_sizes: Vec<usize>,
     pub lut_bank_size: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DerivedValues {
     pub rows: usize,
     pub cols: usize,
@@ -43,6 +43,7 @@ pub struct DerivedValues {
     pub bitvec_edges: Vec<usize>,
     pub batch_bitcount: usize,
     pub num_batches: usize,
+    pub output_bitsize: usize,
 }
 
 impl DerivedValues {
@@ -70,6 +71,7 @@ impl DerivedValues {
         let bitvec_edges: Vec<usize> = layer_edges.iter().map(|&x| x * data.batch_size).collect();
         let batch_bitcount = data.batch_size * img_bitcount;
         let num_batches = rows / data.batch_size; // If batch size does not divide rows, some data will be ignored
+        let &output_bitsize = network.layer_sizes.last().unwrap();
         Self {
             rows,
             cols,
@@ -83,6 +85,7 @@ impl DerivedValues {
             bitvec_edges,
             batch_bitcount,
             num_batches,
+            output_bitsize,
         }
     }
 }
@@ -95,22 +98,27 @@ pub struct Settings {
 
 impl Settings {
     pub fn new() -> Result<Self, ConfigError> {
+        let mut settings_path = PathBuf::from(crate::HOME_DIR);
+        settings_path.push("Settings.toml");
         let s = Config::builder()
-            .add_source(File::with_name("Settings.toml"))
+            .add_source(File::from(settings_path))
             .build()?;
         s.try_deserialize()
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Configuration {
     pub data: Data,
     pub network: Network,
     pub derived: DerivedValues,
 }
 
-pub fn initialize_app_config() -> Configuration {
-    let settings = Settings::new().expect("Failed to load configuration");
+pub fn initialize_app_config_with_network(network: Option<Network>) -> Configuration {
+    let mut settings = Settings::new().expect("Failed to load configuration");
+    if let Some(network) = network {
+        settings.network = network;
+    }
     let derived = DerivedValues::new(&settings.data, &settings.network);
     Configuration {
         data: settings.data,
@@ -119,6 +127,10 @@ pub fn initialize_app_config() -> Configuration {
     }
 }
 
-pub fn get_cfg() -> &'static Configuration {
-    APP_CFG.get_or_init(|| initialize_app_config())
+// pub fn initialize_app_config() -> Configuration {
+//     initialize_app_config_with_network(None)
+// }
+
+pub fn get_cfg(network_opt: Option<Network>) -> &'static Configuration {
+    APP_CFG.get_or_init(|| initialize_app_config_with_network(network_opt))
 }

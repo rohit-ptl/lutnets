@@ -1,6 +1,6 @@
 #![allow(warnings)]
 use crate::{
-    architectures::cnn_inspired::netimpl::*, netcore::*, processing::*, settings::*,
+    architectures::cnn_iv0::netimpl::*, netcore::*, processing::*, settings::*,
     training_algos::piv_node_flipper::utils::*, utils::*,
 };
 use bitvec::prelude::*;
@@ -20,7 +20,7 @@ pub fn train(
     ltnet: &mut LUTNet,
     cfg: &Configuration,
     databits: &BitVec<u8, Msb0>,
-    labels: &[u8],
+    labels: &[usize],
     epochs: usize,
     write_freq: usize,
     model_filename: &str,

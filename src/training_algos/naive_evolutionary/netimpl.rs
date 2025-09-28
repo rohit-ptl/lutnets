@@ -4,6 +4,7 @@ use bitvec::prelude::*;
 impl LUTNet {
     pub fn apply_gates_with_corruption<T, O>(
         &self,
+        cfg: &Configuration,
         bv: &mut BitVec<T, O>,
         node_idxs_to_corrupt: &Vec<usize>,
         mut pseudorandom_lut_generator: impl Iterator<Item = u64>,
@@ -13,7 +14,7 @@ impl LUTNet {
         O: BitOrder,
     {
         // fewer checks, a little more rodeo version of apply_gates. Adds corruption and returns the mutated nodes.
-        let cfg = initialize_app_config();
+        // let cfg = initialize_app_config();
         let mut nodes_to_iterate = self.nodes.clone();
         for node_idx in node_idxs_to_corrupt {
             nodes_to_iterate[*node_idx].lut = pseudorandom_lut_generator.next().unwrap();

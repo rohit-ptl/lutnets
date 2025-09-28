@@ -1,12 +1,22 @@
 use bitvec::prelude::*;
-use lutnets::{netcore::*, processing::*, settings::*};
-use std::{error::Error, fs::File, io::Read, time::Instant};
+use lutnets::{architectures::*, processing::*, utils::calculate_accuracy};
+use std::{error::Error, str::FromStr, time::Instant};
 
 fn main() -> Result<(), Box<dyn Error>> {
+    // This file simply shows creating a new network, and manually running a forward pass on a single batch
     let start_time = Instant::now();
     println!("LUTNets Reference Example");
-    let cfg = get_cfg();
-    let model_filename = "naive_evo_model.ltnet";
+    // let cfg = get_cfg(None);
+    let arch_name = "random";
+    let architecture = Architecture::from_str(&arch_name)?;
+    let (cfg, ltnet) = architecture.build();
+
+    println!(
+        "Network initialized. Nodes: {}, Wall time: {:?}",
+        cfg.derived.network_size,
+        start_time.elapsed()
+    );
+
     let (databits, labels) = lutnets::dataloader::csv_to_bitvec(cfg)?;
     println!(
         "Read {} rows, Wall time: {:?}",
@@ -15,7 +25,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
 
     // Let's create a bit container to hold calculations then process a single batch
-    let batch_num = 0;
+    let batch_num = 0; // Le't handle just one batch in this file.
     let mut dbv = bitvec![u8, Msb0; 0; cfg.derived.bitvec_size];
     let y = &labels[batch_num * cfg.data.batch_size..(batch_num + 1) * cfg.data.batch_size];
     dbv[..cfg.derived.batch_bitcount].copy_from_bitslice(
@@ -29,34 +39,20 @@ fn main() -> Result<(), Box<dyn Error>> {
         start_time.elapsed()
     );
 
-    let ltnet;
-    if std::path::Path::new(model_filename).exists() {
-        let mut file = File::open(model_filename)?;
-        let mut buffer = Vec::new();
-        file.read_to_end(&mut buffer)?;
-        (ltnet, _) = bincode::serde::decode_from_slice(&buffer, bincode::config::standard())?;
-        println!("Loaded model from file: {}", model_filename);
-    } else {
-        ltnet = LUTNet::init_random(cfg.derived.img_bitcount, &cfg.derived.layer_edges, None);
-    }
-
-    println!(
-        "Network initialized. Nodes: {}, Wall time: {:?}",
-        cfg.derived.network_size,
-        start_time.elapsed()
-    );
-
     ltnet.apply_gates(cfg, &mut dbv);
     println!(
         "Forward pass completed. Wall time: {:?}",
         start_time.elapsed()
     );
 
-    let (_predicted_labels, loss) = (get_labels(cfg, &dbv), get_loss(cfg, &dbv, y));
+    let (predicted_labels, loss) = (get_labels(cfg, &dbv), get_loss(cfg, &dbv, y));
+    let accuracy = calculate_accuracy(y, &predicted_labels);
     // println!("Predicted labels: {:?}, Loss: {:?}", predicted_labels, loss);
     println!(
-        "Initial Loss: {:?}, Total time: {:?}",
+        "\n\nStatisitcs on the first batch of data:\n Batch size: {}\n Loss: {:?}\n Accuracy: {:.1}%\n Total time: {:?}",
+        cfg.data.batch_size,
         loss,
+        accuracy * 100.0,
         start_time.elapsed()
     );
     Ok(())

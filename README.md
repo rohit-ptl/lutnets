@@ -23,7 +23,7 @@ Training challenges are the main reason there isn't much research in this area. 
 
 ### Architecture 
 
-I haven't had the opportunity to explore architectures. Even the cnn_inspired example is somewhat lazy in the sense that it just applies spans all the way to the end but never flattens or distributes bits. Obvious ideas/improvements haven't been tested/implemented. Lot of room for experimentation here.
+I haven't had the opportunity to explore architectures. Even the cnn_iv0 example is somewhat lazy in the sense that it just applies spans all the way to the end but never flattens or distributes bits. Obvious ideas/improvements haven't been tested/implemented. Lot of room for experimentation here.
 
 ## Project Layout
 The project is structured as follows:
@@ -37,7 +37,7 @@ The project is structured as follows:
 │   └── mnist_test.csv
 ├── src
 │   ├── architectures
-│   │   ├── cnn_inspired
+│   │   ├── cnn_iv0
 │   │   └── mod.rs
 │   ├── bin
 │   │   ├── naive_evolutionary.rs
@@ -65,7 +65,7 @@ The project is structured as follows:
 *   `src/processing.rs`: Contains functions for processing the output of the network, such as calculating loss and accuracy.
 *   `src/settings.rs`:  Defines the configuration structures for the network and training process.
 *   `src/architectures`: Contains different network architectures.
-    *   `cnn_inspired`: An example of a CNN-inspired architecture.
+    *   `cnn_iv0`: An example of a CNN-inspired architecture.
 *   `src/training_algos`: Contains different training algorithms.
     *   `naive_evolutionary`: A simple evolutionary training algorithm.
     *   `piv_node_flipper`: A training algorithm that flips bits in the LUTs.

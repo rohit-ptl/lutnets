@@ -9,18 +9,16 @@ pub fn train(
     ltnet: &mut LUTNet,
     cfg: &Configuration,
     databits: &BitVec<u8, Msb0>,
-    labels: &[u8],
+    labels: &[usize],
     corruption_ratio: f32,
     lut_sampling_depth: usize,
     epochs: usize,
-    write_freq: usize,
     model_filename: &str,
 ) {
     let start_time = Instant::now();
 
     let mut loss_per_batch: Vec<usize> = Vec::with_capacity(cfg.derived.num_batches);
     let mut dbv = bitvec![u8, Msb0; 0; cfg.derived.bitvec_size];
-    let mut steps = 0;
     for batch_num in 0..cfg.derived.num_batches {
         let y = &labels[batch_num * cfg.data.batch_size..(batch_num + 1) * cfg.data.batch_size];
         dbv[..cfg.derived.batch_bitcount].copy_from_bitslice(
@@ -74,17 +72,6 @@ pub fn train(
                 file.write_all(&encoded_bytes).unwrap();
                 println!("Model written to {}", model_filename);
             }
-            // steps += 1;
-            // if steps % write_freq == 0 {
-            //     println!(
-            //         "Epoch {}, Batch {}, Previous loss: {}, Current Loss: {}, Time: {:?}",
-            //         epoch,
-            //         batch_num,
-            //         loss_per_batch[batch_num],
-            //         c_loss,
-            //         start_time.elapsed()
-            //     );
-            // }
         }
     }
 }
@@ -93,7 +80,7 @@ pub fn iterate_corruptions(
     ltnet: &mut LUTNet,
     cfg: &Configuration,
     dbv: &mut BitVec<u8, Msb0>,
-    y: &[u8],
+    y: &[usize],
     corruption_ratio: f32,
     iterations: usize,
 ) -> Option<(usize, Vec<Node>)> {
@@ -115,11 +102,12 @@ pub fn iterate_corruptions(
             },
             |(pseudorandom_lut_generator, local_dbv), _| {
                 let mutated_nodes = ltnet.apply_gates_with_corruption(
+                    cfg,
                     local_dbv,
                     &node_idxs_to_corrupt,
                     pseudorandom_lut_generator,
                 );
-                let loss = get_loss(&cfg, &local_dbv, y);
+                let loss = get_loss(cfg, &local_dbv, y);
                 // println!("Loss for an iteration: {}", loss);
                 (loss, mutated_nodes)
             },

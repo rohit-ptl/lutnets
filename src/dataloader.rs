@@ -2,10 +2,12 @@ use crate::settings::*;
 use bitvec::prelude::*;
 use csv::ReaderBuilder;
 use std::error::Error;
-use std::fs::File;
+use std::{fs::File, path::PathBuf};
 
-pub fn csv_to_bitvec(cfg: &Configuration) -> Result<(BitVec<u8, Msb0>, Vec<u8>), Box<dyn Error>> {
-    let (filepath, rows, start_row) = match cfg.data.datasplit {
+pub fn csv_to_bitvec(
+    cfg: &Configuration,
+) -> Result<(BitVec<u8, Msb0>, Vec<usize>), Box<dyn Error>> {
+    let (relative_filepath, rows, start_row) = match cfg.data.datasplit {
         // We are going to treat last 10k train rows as validation set
         DataSplit::Train(r) => {
             if r == 0 || r > 50000 {
@@ -27,8 +29,10 @@ pub fn csv_to_bitvec(cfg: &Configuration) -> Result<(BitVec<u8, Msb0>, Vec<u8>),
         }
     };
     let cols = cfg.derived.cols;
+    let mut data_filepath = PathBuf::from(crate::HOME_DIR);
+    data_filepath.push(relative_filepath);
 
-    let file = File::open(filepath)?;
+    let file = File::open(data_filepath)?;
     let mut rdr = ReaderBuilder::new().has_headers(true).from_reader(file);
     let mut bit_vector = BitVec::new();
     let mut labels = Vec::with_capacity(rows);
@@ -60,7 +64,7 @@ pub fn csv_to_bitvec(cfg: &Configuration) -> Result<(BitVec<u8, Msb0>, Vec<u8>),
 
                 let mut fields = record.iter();
                 let first_field = fields.next().unwrap();
-                let label_value: u8 = first_field.trim().parse()?;
+                let label_value: usize = first_field.trim().parse()?;
                 labels.push(label_value);
 
                 for field in fields {
@@ -87,20 +91,20 @@ mod tests {
 
     #[test]
     fn csv_to_bitvec_loads_data_correctly() {
-        let mut cfg = initialize_app_config();
+        let mut cfg = initialize_app_config_with_network(None);
         cfg.data.datasplit = DataSplit::Train(1000); // The hardcoded values below are from first 1000 rows of train set
 
         let (databits, labels) = csv_to_bitvec(&cfg).unwrap();
         // Manually looked up values hardcoded below
         let test_rows: [usize; 10] = [5, 21, 78, 101, 225, 321, 453, 654, 777, 876];
         let test_cols: [usize; 10] = [215, 158, 157, 691, 518, 429, 442, 292, 296, 372];
-        let true_pixel_values: [u8; 10] = [87, 112, 42, 209, 129, 168, 252, 41, 11, 3];
-        let true_labels: [u8; 10] = [9, 4, 1, 5, 1, 0, 3, 5, 0, 3];
+        let true_pixel_values: [usize; 10] = [87, 112, 42, 209, 129, 168, 252, 41, 11, 3];
+        let true_labels: [usize; 10] = [9, 4, 1, 5, 1, 0, 3, 5, 0, 3];
         for (i, &row_idx) in test_rows.iter().enumerate() {
             let idx_to_print = (row_idx - 1) * (cfg.data.dim1 * cfg.data.dim2 * cfg.data.dim3)
                 + (test_cols[i] - 1) * (cfg.data.dim1);
-            let bslice = &databits[idx_to_print..idx_to_print + 8];
-            assert_eq!(bslice.load_be::<u8>(), true_pixel_values[i]);
+            let bslice = &databits[idx_to_print..idx_to_print + cfg.data.dim1];
+            assert_eq!(bslice.load_be::<usize>(), true_pixel_values[i]);
             assert_eq!(labels[row_idx - 1], true_labels[i]);
         }
     }
