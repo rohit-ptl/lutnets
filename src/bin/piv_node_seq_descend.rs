@@ -22,10 +22,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Parse the arguments and load the mode. This code is exposed here because various algoritms may need additional arguments.
     match (args.a, args.f) {
-        (Some(arch_name), Some(model_file_str)) => {
+        (Some(arch_name), Some(model_file_base)) => {
             let arch = Architecture::from_str(&arch_name)?;
             (cfg, ltnet) = arch.build();
-            model_filename = model_file_str;
+            model_filename = format!("{}.ltnet", model_file_base);
             if std::path::Path::new(&model_filename).exists() {
                 panic!(
                     "File {} already exists! Omit the -a flag if you want to load an existing model file.",
@@ -33,9 +33,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                 );
             }
         }
-        (None, Some(model_file_str)) => {
-            (cfg, ltnet) = load_model_from_file(&model_file_str);
-            model_filename = model_file_str;
+        (None, Some(model_file_base)) => {
+            model_filename = format!("{}.ltnet", model_file_base);
+            (cfg, ltnet) = load_model_from_file(&model_filename);
         }
         (Some(_), None) => unreachable!(),
         (None, None) => {

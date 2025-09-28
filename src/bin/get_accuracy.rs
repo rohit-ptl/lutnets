@@ -23,15 +23,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Parse the arguments and load the mode. This code is exposed here because various algoritms may need additional arguments.
 
     match args.f {
-        Some(model_file_str) => {
-            if !std::path::Path::new(&model_file_str).exists() {
-                panic!("File {} does not exist!", &model_file_str);
+        Some(model_filename_base) => {
+            let model_filename = format!("{}.ltnet", model_filename_base);
+            if !std::path::Path::new(&model_filename).exists() {
+                panic!("File {} does not exist. Only .ltnet files supported. You don't need to provide extension.", &model_filename);
             }
-            (cfg_default, ltnet) = load_model_from_file(&model_file_str);
+            (cfg_default, ltnet) = load_model_from_file(&model_filename);
             cfg = cfg_default.clone();
         }
         None => {
-            panic!("Must specify a file with option -f");
+            panic!("Must specify a file with option -- -f <filename>");
         }
     }
 
@@ -59,7 +60,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             cfg.data.datasplit = DataSplit::Val(batch_size);
         }
     }
-    println!("Getting Validating accuracy");
+    println!("Getting {:?} accuracy", cfg.data.datasplit);
 
     cfg.data.batch_size = batch_size as usize;
     cfg.derived = DerivedValues::new(&cfg.data, &cfg.network);
@@ -81,9 +82,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let (predicted_labels, loss) = (get_labels(&cfg, &dbv), get_loss(&cfg, &dbv, y));
     let accuracy = calculate_accuracy(y, &predicted_labels);
     println!(
-        "Validation Loss: {:?}, Validation Accuracy: {}, Total time: {:?}",
+        " Loss: {:?}\n Accuracy: {:.1}%\n Total time: {:?}",
         loss,
-        accuracy,
+        accuracy*100.0,
         start_time.elapsed()
     );
     Ok(())
