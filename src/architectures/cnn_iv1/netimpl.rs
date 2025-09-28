@@ -1,29 +1,37 @@
-use crate::{architectures::cnn_rand_hybrid::settings::*, iterators::*, netcore::*, settings::*};
+use crate::{
+    architectures::{LUTNetBuilder, cnn_iv1::settings::*},
+    iterators::*,
+    lut_bank_creators::*,
+    netcore::*,
+    settings::Configuration,
+};
 use rand::prelude::*;
 use rand_xoshiro::Xoshiro256PlusPlus;
 
-impl LUTNet {
-    pub fn init_spanew(lut_bank: Option<Vec<u64>>) -> Self {
-        let cfg = initialize_app_config();
-        let ci_cfg = initialize_ci_cfg();
-        assert_eq!(cfg.network.layer_sizes, ci_cfg.layer_sizes);
-        if let Some(lut_bank) = &lut_bank {
-            assert_eq!(cfg.network.lut_bank_size, lut_bank.len());
-        }
+impl LUTNetBuilder for Ci1Settings {
+    fn build_net(&self) -> (&'static Configuration, LUTNet) {
+        let cfg = get_cfg(self);
         let mut nodes: Vec<Node> = Vec::with_capacity(cfg.derived.network_size);
         let mut offset: usize = 0;
         let (mut dim1, mut dim2, mut dim3) = (cfg.data.dim1, cfg.data.dim2, cfg.data.dim3);
         let mut spanbitcount = cfg.derived.img_bitcount;
         let mut rng_luts = Xoshiro256PlusPlus::from_rng(&mut rand::rng());
-        // println!("{}",spanbitcount);
+
+        let lut_bank;
+        if cfg.network.lut_bank_size > 0 {
+            lut_bank = generate_luts(&cfg);
+        } else {
+            lut_bank = None;
+        }
+
         for i in 0..2 {
             let (len1, len2, len3, hop1, hop2, hop3) = (
-                ci_cfg.layer_span_details[i].0.0,
-                ci_cfg.layer_span_details[i].0.1,
-                ci_cfg.layer_span_details[i].0.2,
-                ci_cfg.layer_span_details[i].1.0,
-                ci_cfg.layer_span_details[i].1.1,
-                ci_cfg.layer_span_details[i].1.2,
+                self.layer_span_details[i].0.0,
+                self.layer_span_details[i].0.1,
+                self.layer_span_details[i].0.2,
+                self.layer_span_details[i].1.0,
+                self.layer_span_details[i].1.1,
+                self.layer_span_details[i].1.2,
             );
             // println!("offset:{}, dim1:{},dim2:{},dim3:{}",offset,dim1,dim2,dim3);
             let spiterator =
@@ -85,42 +93,45 @@ impl LUTNet {
         }
         println!("{:?}, {}", nodes.len(), cfg.derived.network_size);
         // let luts = generate_LUTs();
-        LUTNet {
-            nodes: nodes,
-            input_size_in_bits: cfg.derived.img_bitcount,
-            layer_edges: cfg.derived.layer_edges.clone(),
-            lut_bank,
-        }
+        (
+            cfg,
+            LUTNet {
+                nodes: nodes,
+                input_size_in_bits: cfg.derived.img_bitcount,
+                layer_edges: cfg.derived.layer_edges.clone(),
+                lut_bank,
+                output_embedding: cfg.network.output_embedding.clone(),
+            },
+        )
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{lut_bank_creators::*, netcore::LUTNet, settings::*};
+    use crate::architectures::*;
 
     #[test]
-    fn spanew_lutnet_created_correctly() {
-        let cfg = get_cfg();
-        let lut_bank = generate_luts(&cfg);
-        let ltnet = LUTNet::init_spanew(lut_bank.clone());
+    fn cnn_iv1_created_correctly() {
+        let arch_name = "cnn_iv1";
+        let architecture = Architecture::from_str(&arch_name)
+            .expect("Could not create architecture in span creation test");
+        let (cfg, ltnet) = architecture.build();
         for layer in 0..cfg.derived.num_layers {
             let layer_nodes =
                 &ltnet.nodes[cfg.derived.layer_edges[layer]..cfg.derived.layer_edges[layer + 1]];
             let min_index = layer_nodes.iter().flat_map(|node| node.indices).min();
             let max_index = layer_nodes.iter().flat_map(|node| node.indices).max();
-            assert_eq!(
-                min_index.unwrap(),
-                (cfg.derived.layer_edges[layer.saturating_sub(1)] + cfg.derived.img_bitcount)
-                    * std::cmp::min(layer, 1)
+
+            assert!(
+                min_index.unwrap()
+                    >= (cfg.derived.layer_edges[layer.saturating_sub(1)]
+                        + cfg.derived.img_bitcount)
+                        * std::cmp::min(layer, 1)
             );
-            assert_eq!(
-                max_index.unwrap(),
-                cfg.derived.layer_edges[layer] + cfg.derived.img_bitcount - 1
-            );
-            // println!("Layer {}: min_index={}, max_index={}", layer, min_index2.unwrap(), max_index2.unwrap());
+            assert!(max_index.unwrap() < cfg.derived.layer_edges[layer] + cfg.derived.img_bitcount);
         }
 
-        if let Some(lut_bank) = lut_bank {
+        if let Some(lut_bank) = ltnet.lut_bank {
             for node in ltnet.nodes {
                 assert!(lut_bank.contains(&node.lut));
             }

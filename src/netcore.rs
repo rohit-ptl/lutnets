@@ -19,15 +19,34 @@ pub struct LUTNet {
     pub input_size_in_bits: usize, // This is the size, in bits, of each input item to the network. 784 for MNIST
     pub layer_edges: Vec<usize>,   // indices in nodes vector where each layer starts
     pub lut_bank: Option<Vec<u64>>, // If we want a network with finite lut bank for each node to pick from
+    pub output_embedding: Vec<usize>,
 }
 
 impl LUTNet {
+    pub fn new(
+        nodes: Vec<Node>,
+        input_size_in_bits: usize,
+        layer_edges: Vec<usize>,
+        lut_bank: Option<Vec<u64>>,
+        output_embedding: Vec<usize>,
+    ) -> Self {
+        LUTNet {
+            nodes,
+            input_size_in_bits,
+            layer_edges,
+            lut_bank,
+            output_embedding,
+        }
+    }
+
     pub fn init_random(
         input_size_in_bits: usize,
         layer_edges: &Vec<usize>,
         lut_bank: Option<Vec<u64>>,
+        output_embedding: &Vec<usize>,
     ) -> Self {
-        // This is a highly random and pretty impractical initialization. A slightly better (but still pretty bad) one is init_spanned in architectures/cnn_inspired/netimpl.rs
+        // This is a highly random and pretty impractical initialization. A slightly better (but still pretty bad) one is init_spanned in architectures/cnn_iv0/netimpl.rs
+        // This network basically just randomly connects a node in next layer to arbitrary 6 nodes in previous layer.
 
         let &network_size = layer_edges.last().unwrap();
         let mut nodes = Vec::with_capacity(network_size);
@@ -67,6 +86,7 @@ impl LUTNet {
             input_size_in_bits,
             layer_edges: layer_edges.clone(),
             lut_bank: None,
+            output_embedding: output_embedding.clone(),
         }
     }
 
@@ -199,20 +219,17 @@ impl LUTNet {
 
 #[cfg(test)]
 mod tests {
-    use crate::{dataloader::*, lut_bank_creators::*, netcore::LUTNet, settings::*};
+    use crate::{architectures::*, dataloader::*};
     use bitvec::prelude::*;
     use rand::Rng;
+    use std::str::FromStr;
 
     #[test]
     fn random_lutnet_created_correctly() {
-        let cfg = get_cfg();
-        let lut_bank = generate_luts(&cfg);
-        let ltnet = LUTNet::init_random(
-            cfg.derived.img_bitcount,
-            &cfg.derived.layer_edges,
-            lut_bank.clone(),
-        );
-
+        let arch_name = "random";
+        let architecture = Architecture::from_str(&arch_name)
+            .expect("Could not create architecture in span creation test");
+        let (cfg, ltnet) = architecture.build();
         for layer in 0..cfg.derived.num_layers {
             let layer_nodes =
                 &ltnet.nodes[cfg.derived.layer_edges[layer]..cfg.derived.layer_edges[layer + 1]];
@@ -227,7 +244,7 @@ mod tests {
             assert!(max_index.unwrap() < cfg.derived.layer_edges[layer] + cfg.derived.img_bitcount);
             // println!("Layer {}: min_index={}, max_index={}", layer, min_index2.unwrap(), max_index2.unwrap());
         }
-        if let Some(lut_bank) = lut_bank {
+        if let Some(lut_bank) = ltnet.lut_bank {
             for node in ltnet.nodes {
                 assert!(lut_bank.contains(&node.lut));
             }
@@ -236,13 +253,15 @@ mod tests {
 
     #[test]
     fn gate_application_works_correctly() {
-        let cfg = get_cfg();
+        let arch_name = "random";
+        let architecture = Architecture::from_str(&arch_name)
+            .expect("Could not create architecture in span creation test");
+        let (cfg, ltnet) = architecture.build();
         let (databits, _) = csv_to_bitvec(cfg).unwrap();
         // println!("DATA_BITS: {}, cfg.derived.batch_bitcount: {}, cfg.derived.bitvec_size: {}", cfg.derived.data_bitcount, cfg.derived.batch_bitcount, cfg.derived.bitvec_size);
         let mut dbv = bitvec![u8, Msb0; 0; cfg.derived.bitvec_size];
         dbv[..cfg.derived.batch_bitcount]
             .copy_from_bitslice(&databits[..cfg.derived.batch_bitcount]);
-        let ltnet = LUTNet::init_random(cfg.derived.img_bitcount, &cfg.derived.layer_edges, None);
         ltnet.apply_gates(cfg, &mut dbv);
         let mut rng = rand::rng();
         let some_node_ids: Vec<(usize, usize, usize)> = (0..cfg.derived.num_layers)

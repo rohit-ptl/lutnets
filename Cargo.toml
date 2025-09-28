@@ -13,3 +13,4 @@ serde = { version = "*", features = ["derive"] }
 bincode = {version = "*", features = ["serde"]}
 serde-big-array="*"
 config = { version = "*", features = ["toml"] }
+clap = { version = "*", features = ["derive"] }

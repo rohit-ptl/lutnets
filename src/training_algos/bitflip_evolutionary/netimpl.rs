@@ -4,6 +4,7 @@ use bitvec::prelude::*;
 impl LUTNet {
     pub fn apply_gates_with_bitflips<T, O>(
         &self,
+        cfg: &Configuration,
         bv: &mut BitVec<T, O>,
         node_idxs_to_corrupt: &Vec<usize>,
         mut pseudo_6bit_generator: impl Iterator<Item = u8>,
@@ -13,10 +14,10 @@ impl LUTNet {
         O: BitOrder,
     {
         // fewer checks, a little more rodeo version of apply_gates. Adds corruption and returns the mutated nodes.
-        let cfg = initialize_app_config();
+        // let cfg = initialize_app_config();
         let mut nodes_to_iterate = self.nodes.clone();
         for node_idx in node_idxs_to_corrupt {
-            nodes_to_iterate[*node_idx].lut ^= (1 <<pseudo_6bit_generator.next().unwrap());
+            nodes_to_iterate[*node_idx].lut ^= 1 << pseudo_6bit_generator.next().unwrap();
         }
         for layer in 0..cfg.derived.num_layers {
             let gate_iterator = LayerGateIterator::new(&cfg, layer);

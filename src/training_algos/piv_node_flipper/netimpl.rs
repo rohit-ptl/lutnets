@@ -110,14 +110,19 @@ mod tests {
 
     #[test]
     fn pivotal_nodes_tracking_works_correctly() {
-        let mut cfg = initialize_app_config();
+        let mut cfg = initialize_app_config_with_network(None);
         cfg.data.batch_size = 20;
         cfg.derived = DerivedValues::new(&cfg.data, &cfg.network);
         let (databits, _labels) = csv_to_bitvec(&cfg).unwrap();
         let mut dbv = bitvec![u8, Msb0; 0; cfg.derived.bitvec_size];
         dbv[..cfg.derived.batch_bitcount]
             .copy_from_bitslice(&databits[..cfg.derived.batch_bitcount]);
-        let ltnet = LUTNet::init_random(cfg.derived.img_bitcount, &cfg.derived.layer_edges, None);
+        let ltnet = LUTNet::init_random(
+            cfg.derived.img_bitcount,
+            &cfg.derived.layer_edges,
+            None,
+            &cfg.network.output_embedding,
+        );
         let pivotal_nodes = ltnet.apply_gates_while_tracking_pivotal_nodes(&cfg, &mut dbv);
         let selected_bits_to_flip = find_most_frequent_pivotal_node(&pivotal_nodes);
         let mut last_layer_location_for_batch_in_bitvec = cfg.derived.bitvec_size
@@ -173,7 +178,7 @@ mod tests {
 
     #[test]
     fn flipping_pivotal_reduces_loss() {
-        let mut cfg = initialize_app_config();
+        let mut cfg = initialize_app_config_with_network(None);
         cfg.data.batch_size = 1;
         cfg.derived = DerivedValues::new(&cfg.data, &cfg.network);
         let (databits, labels) = csv_to_bitvec(&cfg).unwrap();
@@ -184,8 +189,12 @@ mod tests {
             &databits[batch_num * cfg.derived.batch_bitcount
                 ..(batch_num + 1) * cfg.derived.batch_bitcount],
         );
-        let mut ltnet =
-            LUTNet::init_random(cfg.derived.img_bitcount, &cfg.derived.layer_edges, None);
+        let mut ltnet = LUTNet::init_random(
+            cfg.derived.img_bitcount,
+            &cfg.derived.layer_edges,
+            None,
+            &cfg.network.output_embedding,
+        );
         ltnet.apply_gates(&cfg, &mut dbv);
         let pivotal_nodes = ltnet.apply_gates_while_tracking_pivotal_nodes(&cfg, &mut dbv);
         // let last_layer_location_for_batch_in_bitvec = cfg.derived.bitvec_size - cfg.data.batch_size * cfg.network.layer_sizes[cfg.derived.num_layers - 1];
