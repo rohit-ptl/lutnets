@@ -1,5 +1,5 @@
 use crate::{
-    architectures::{LUTNetBuilder, cnn_iv1::settings::*},
+    architectures::{LUTNetBuilder, cnn_iv2::settings::*},
     iterators::*,
     lut_bank_creators::*,
     netcore::*,
@@ -8,7 +8,7 @@ use crate::{
 use rand::prelude::*;
 use rand_xoshiro::Xoshiro256PlusPlus;
 
-impl LUTNetBuilder for Ci1Settings {
+impl LUTNetBuilder for Ci2Settings {
     fn build_net(&self) -> (&'static Configuration, LUTNet) {
         let cfg = get_cfg(self);
         let mut nodes: Vec<Node> = Vec::with_capacity(cfg.derived.network_size);
@@ -24,7 +24,8 @@ impl LUTNetBuilder for Ci1Settings {
             lut_bank = None;
         }
 
-        for i in 0..self.layer_span_details.len() {
+        // println!("{}",spanbitcount);
+        for i in 0..(cfg.derived.num_layers - 1) {
             let (len1, len2, len3, hop1, hop2, hop3) = (
                 self.layer_span_details[i].0.0,
                 self.layer_span_details[i].0.1,
@@ -59,49 +60,30 @@ impl LUTNetBuilder for Ci1Settings {
             // println!("Total spans generated: {}", spanbitcount);
         }
         // println!("offset before last:{}, dim1:{},dim2:{},dim3:{}",offset,dim1,dim2,dim3);
-        // let mut rng = Xoshiro256PlusPlus::from_rng(&mut rand::random()).unwrap();
-        let mut rng: Xoshiro256PlusPlus = Xoshiro256PlusPlus::from_rng(&mut rand::rng());
-
-        for node_index in cfg.derived.layer_edges[2]..cfg.derived.network_size {
-            let layer_index =
-                cfg.derived.layer_edges[1..].partition_point(|&edge| edge <= node_index);
-
-            let (range_start, range_end) = if layer_index == 0 {
-                (0, cfg.derived.img_bitcount)
-            } else {
-                let start = cfg.derived.img_bitcount + cfg.derived.layer_edges[layer_index - 1];
-                let end = cfg.derived.img_bitcount + cfg.derived.layer_edges[layer_index];
-                (start, end)
-            };
-
-            let mut indices = [0usize; 6];
-            for i in 0..6 {
-                indices[i] = rng.random_range(range_start..range_end);
-            }
-
-            let node = Node {
-                lut: if let Some(lut_bank) = &lut_bank {
-                    // lut_bank[rng.gen_range(0..lut_bank.len())]
-                    lut_bank[rng.random_range(0..lut_bank.len())]
-                } else {
-                    rng.next_u64()
-                },
-                indices,
-            };
-
-            nodes.push(node);
-        }
-        println!("{:?}, {}", nodes.len(), cfg.derived.network_size);
+        let last_layer_iterator = SpanGenerator::new(0, 27, 1, 1, 6, 1, 1, 3, 1, 1); // bunch of hardcoded values, FIX later!
+        nodes.extend(
+            last_layer_iterator
+                .map(|span| Node {
+                    lut: if let Some(lut_bank) = &lut_bank {
+                        lut_bank[rng_luts.random_range(0..lut_bank.len())]
+                    } else {
+                        rng_luts.next_u64()
+                    },
+                    indices: span.map(|x| (x % spanbitcount) + offset),
+                })
+                .collect::<Vec<Node>>(),
+        );
+        // println!("{:?}, {}",nodes.len(), cfg.derived.network_size);
         // let luts = generate_LUTs();
         (
             cfg,
-            LUTNet {
-                nodes: nodes,
-                input_size_in_bits: cfg.derived.img_bitcount,
-                layer_edges: cfg.derived.layer_edges.clone(),
+            LUTNet::new(
+                nodes,
+                cfg.derived.img_bitcount,
+                cfg.derived.layer_edges.clone(),
                 lut_bank,
-                output_embedding: cfg.network.output_embedding.clone(),
-            },
+                cfg.network.output_embedding.clone(),
+            ),
         )
     }
 }
@@ -111,8 +93,8 @@ mod tests {
     use crate::architectures::*;
 
     #[test]
-    fn cnn_iv1_created_correctly() {
-        let arch_name = "cnn_iv1";
+    fn cnn_iv2_created_correctly() {
+        let arch_name = "cnn_iv2";
         let architecture = Architecture::from_str(&arch_name)
             .expect("Could not create architecture in span creation test");
         let (cfg, ltnet) = architecture.build();
@@ -121,14 +103,16 @@ mod tests {
                 &ltnet.nodes[cfg.derived.layer_edges[layer]..cfg.derived.layer_edges[layer + 1]];
             let min_index = layer_nodes.iter().flat_map(|node| node.indices).min();
             let max_index = layer_nodes.iter().flat_map(|node| node.indices).max();
-
-            assert!(
-                min_index.unwrap()
-                    >= (cfg.derived.layer_edges[layer.saturating_sub(1)]
-                        + cfg.derived.img_bitcount)
-                        * std::cmp::min(layer, 1)
+            assert_eq!(
+                min_index.unwrap(),
+                (cfg.derived.layer_edges[layer.saturating_sub(1)] + cfg.derived.img_bitcount)
+                    * std::cmp::min(layer, 1)
             );
-            assert!(max_index.unwrap() < cfg.derived.layer_edges[layer] + cfg.derived.img_bitcount);
+            assert_eq!(
+                max_index.unwrap(),
+                cfg.derived.layer_edges[layer] + cfg.derived.img_bitcount - 1
+            );
+            // println!("Layer {}: min_index={}, max_index={}", layer, min_index2.unwrap(), max_index2.unwrap());
         }
 
         if let Some(lut_bank) = ltnet.lut_bank {
