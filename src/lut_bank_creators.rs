@@ -179,7 +179,7 @@ pub fn generate_diverse_256_luts() -> Option<Vec<u64>> {
     final_luts.sort();
 
     // In case we generated fewer than 256 unique LUTs, pad with pseudo-random constants.
-    let mut random_seed = 0x_C0FFEE_BABE_D00D_u64;
+    let mut random_seed = 0x00C0_FFEE_BABE_D00D_u64;
     while final_luts.len() < 256 {
         // Use a simple Linear Congruential Generator to get new values
         random_seed = random_seed

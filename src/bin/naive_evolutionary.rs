@@ -26,7 +26,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             let arch = Architecture::from_str(&arch_name)?;
             (cfg, ltnet) = arch.build();
             model_filename = format!("{}.ltnet", model_file_base);
-            if std::path::Path::new(&model_filename).exists()  | std::path::Path::new(&model_file_base).exists() {
+            if std::path::Path::new(&model_filename).exists()
+                | std::path::Path::new(&model_file_base).exists()
+            {
                 panic!(
                     "File {} already exists! Omit the -a flag if you want to load an existing model file.",
                     &model_file_base
@@ -56,7 +58,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     ltnet.verify_lut_bank_integrity();
     train(
         &mut ltnet,
-        &cfg,
+        cfg,
         &databits,
         &labels,
         0.001,

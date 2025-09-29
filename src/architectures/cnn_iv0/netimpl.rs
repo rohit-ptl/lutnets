@@ -17,12 +17,11 @@ impl LUTNetBuilder for Ci0Settings {
         let mut spanbitcount = cfg.derived.img_bitcount;
         let mut rng_luts = Xoshiro256PlusPlus::from_rng(&mut rand::rng());
 
-        let lut_bank;
-        if cfg.network.lut_bank_size > 0 {
-            lut_bank = generate_luts(&cfg);
+        let lut_bank = if cfg.network.lut_bank_size > 0 {
+            generate_luts(cfg)
         } else {
-            lut_bank = None;
-        }
+            None
+        };
 
         for i in 0..self.layer_span_details.len() {
             let (len1, len2, len3, hop1, hop2, hop3) = (
@@ -33,7 +32,6 @@ impl LUTNetBuilder for Ci0Settings {
                 self.layer_span_details[i].1.1,
                 self.layer_span_details[i].1.2,
             );
-            // println!("offset:{}, dim1:{},dim2:{},dim3:{}",offset,dim1,dim2,dim3);
             let spiterator =
                 SpanGenerator::new(offset, dim1, dim2, dim3, len1, len2, len3, hop1, hop2, hop3);
             offset += spanbitcount;
@@ -89,16 +87,15 @@ impl LUTNetBuilder for Ci0Settings {
 
 #[cfg(test)]
 mod tests {
-    use crate::architectures::*;
-
+    use crate::architectures::Architecture;
+    use std::str::FromStr;
     #[test]
     fn cnn_iv0_created_correctly() {
         let arch_name = "cnn_iv0";
-        let architecture = Architecture::from_str(&arch_name)
+        let architecture = Architecture::from_str(arch_name)
             .expect("Could not create architecture in span creation test");
         let (cfg, ltnet) = architecture.build();
         for layer in 0..cfg.derived.num_layers {
-            println!("layer edges {:?}", cfg.derived.layer_edges);
             let layer_nodes =
                 &ltnet.nodes[cfg.derived.layer_edges[layer]..cfg.derived.layer_edges[layer + 1]];
             let min_index = layer_nodes.iter().flat_map(|node| node.indices).min();

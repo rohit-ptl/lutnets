@@ -56,7 +56,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     ltnet.verify_lut_bank_integrity();
     train(
         &mut ltnet,
-        &cfg,
+        cfg,
         &databits,
         &labels,
         100000,

@@ -63,12 +63,12 @@ impl Architecture {
             }
             Architecture::Random => {
                 let cfg = crate::settings::get_cfg(None);
-                let lut_bank: Option<Vec<u64>>;
-                if cfg.network.lut_bank_size > 0 {
-                    lut_bank = generate_luts(&cfg);
+
+                let lut_bank = if cfg.network.lut_bank_size > 0 {
+                    generate_luts(cfg)
                 } else {
-                    lut_bank = None;
-                }
+                    None
+                };
                 let ltnet = LUTNet::init_random(
                     cfg.derived.img_bitcount,
                     &cfg.derived.layer_edges,

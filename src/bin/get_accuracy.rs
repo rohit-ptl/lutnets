@@ -1,6 +1,6 @@
 use bitvec::prelude::*;
 use clap::Parser;
-use lutnets::{ modelloader::load_model_from_file, netcore::*, settings::*};
+use lutnets::{modelloader::load_model_from_file, netcore::*, settings::*};
 use lutnets::{processing::*, utils::*};
 use std::{error::Error, time::Instant};
 
@@ -26,7 +26,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         Some(model_filename_base) => {
             let model_filename = format!("{}.ltnet", model_filename_base);
             if !std::path::Path::new(&model_filename).exists() {
-                panic!("File {} does not exist. Only .ltnet files supported. You don't need to provide extension.", &model_filename);
+                panic!(
+                    "File {} does not exist. Only .ltnet files supported. You don't need to provide extension.",
+                    &model_filename
+                );
             }
             (cfg_default, ltnet) = load_model_from_file(&model_filename);
             cfg = cfg_default.clone();
@@ -84,7 +87,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!(
         " Loss: {:?}\n Accuracy: {:.1}%\n Total time: {:?}",
         loss,
-        accuracy*100.0,
+        accuracy * 100.0,
         start_time.elapsed()
     );
     Ok(())

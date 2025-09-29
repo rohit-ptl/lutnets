@@ -25,7 +25,7 @@ pub fn train(
             &databits[batch_num * cfg.derived.batch_bitcount
                 ..(batch_num + 1) * cfg.derived.batch_bitcount],
         );
-        ltnet.apply_gates(&cfg, &mut dbv);
+        ltnet.apply_gates(cfg, &mut dbv);
         loss_per_batch.push(get_loss(cfg, &dbv, y));
     }
     print!(
@@ -43,9 +43,9 @@ pub fn train(
             // loss = loss_per_batch[batch_num];
             let (c_loss, mutated_nodes) = iterate_corruptions(
                 ltnet,
-                &cfg,
+                cfg,
                 &mut dbv,
-                &y,
+                y,
                 corruption_ratio,
                 lut_sampling_depth,
             )
@@ -93,7 +93,7 @@ pub fn iterate_corruptions(
     let node_idxs_to_corrupt: Vec<usize> =
         index::sample(&mut rng, cfg.derived.network_size, num_to_corrupt).into_vec();
     // let mut oloss   = initial_loss;
-    let best_result = (0..iterations)
+    (0..iterations)
         .into_par_iter()
         .map_init(
             || {
@@ -107,11 +107,10 @@ pub fn iterate_corruptions(
                     &node_idxs_to_corrupt,
                     pseudorandom_lut_generator,
                 );
-                let loss = get_loss(cfg, &local_dbv, y);
+                let loss = get_loss(cfg, local_dbv, y);
                 // println!("Loss for an iteration: {}", loss);
                 (loss, mutated_nodes)
             },
         )
-        .min_by_key(|(loss, _)| *loss);
-    best_result
+        .min_by_key(|(loss, _)| *loss)
 }

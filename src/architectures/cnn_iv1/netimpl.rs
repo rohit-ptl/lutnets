@@ -17,13 +17,11 @@ impl LUTNetBuilder for Ci1Settings {
         let mut spanbitcount = cfg.derived.img_bitcount;
         let mut rng_luts = Xoshiro256PlusPlus::from_rng(&mut rand::rng());
 
-        let lut_bank;
-        if cfg.network.lut_bank_size > 0 {
-            lut_bank = generate_luts(&cfg);
+        let lut_bank = if cfg.network.lut_bank_size > 0 {
+            generate_luts(cfg)
         } else {
-            lut_bank = None;
-        }
-
+            None
+        };
         for i in 0..self.layer_span_details.len() {
             let (len1, len2, len3, hop1, hop2, hop3) = (
                 self.layer_span_details[i].0.0,
@@ -75,8 +73,8 @@ impl LUTNetBuilder for Ci1Settings {
             };
 
             let mut indices = [0usize; 6];
-            for i in 0..6 {
-                indices[i] = rng.random_range(range_start..range_end);
+            for item in &mut indices {
+                *item = rng.random_range(range_start..range_end);
             }
 
             let node = Node {
@@ -91,12 +89,10 @@ impl LUTNetBuilder for Ci1Settings {
 
             nodes.push(node);
         }
-        println!("{:?}, {}", nodes.len(), cfg.derived.network_size);
-        // let luts = generate_LUTs();
         (
             cfg,
             LUTNet {
-                nodes: nodes,
+                nodes,
                 input_size_in_bits: cfg.derived.img_bitcount,
                 layer_edges: cfg.derived.layer_edges.clone(),
                 lut_bank,
@@ -113,7 +109,7 @@ mod tests {
     #[test]
     fn cnn_iv1_created_correctly() {
         let arch_name = "cnn_iv1";
-        let architecture = Architecture::from_str(&arch_name)
+        let architecture = Architecture::from_str(arch_name)
             .expect("Could not create architecture in span creation test");
         let (cfg, ltnet) = architecture.build();
         for layer in 0..cfg.derived.num_layers {

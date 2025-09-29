@@ -41,9 +41,9 @@ impl LUTNet {
 
     pub fn init_random(
         input_size_in_bits: usize,
-        layer_edges: &Vec<usize>,
+        layer_edges: &[usize],
         lut_bank: Option<Vec<u64>>,
-        output_embedding: &Vec<usize>,
+        output_embedding: &[usize],
     ) -> Self {
         // This is a highly random and pretty impractical initialization. A slightly better (but still pretty bad) one is init_spanned in architectures/cnn_iv0/netimpl.rs
         // This network basically just randomly connects a node in next layer to arbitrary 6 nodes in previous layer.
@@ -66,8 +66,8 @@ impl LUTNet {
                     };
                     // println!("range for node {}: {} to {}", node_index, range_start, range_end);
                     let mut indices = [0usize; 6];
-                    for i in 0..6 {
-                        indices[i] = rng().random_range(range_start..range_end);
+                    for item in &mut indices {
+                        *item = rng().random_range(range_start..range_end);
                     }
                     Node {
                         lut: if let Some(lut_bank) = &lut_bank {
@@ -82,11 +82,11 @@ impl LUTNet {
             .collect_into_vec(&mut nodes);
 
         LUTNet {
-            nodes: nodes,
+            nodes,
             input_size_in_bits,
-            layer_edges: layer_edges.clone(),
+            layer_edges: layer_edges.to_owned(),
             lut_bank: None,
-            output_embedding: output_embedding.clone(),
+            output_embedding: output_embedding.to_owned(),
         }
     }
 
@@ -105,7 +105,7 @@ impl LUTNet {
                 .filter_map(|(node_idx, _, _, bitvec_index, readbit_offset)| {
                     if let Some(node) = self.nodes.get(node_idx) {
                         let indices = &node.indices;
-                        if indices.iter().any(|&idx| idx as usize >= bv_len) {
+                        if indices.iter().any(|&idx| idx >= bv_len) {
                             println!("indices: {:?}, bvlen: {}", indices, bv_len);
                             panic! {"Invalid read index in node at index {}", node_idx};
                         }
@@ -119,17 +119,12 @@ impl LUTNet {
                         //     ((*bv.get(indices[5] + readbit_offset).unwrap() as u8) << 5);
 
                         let lut_input = unsafe {
-                            (*bv.get_unchecked(indices[0] as usize + readbit_offset) as u8)
-                                | ((*bv.get_unchecked(indices[1] as usize + readbit_offset) as u8)
-                                    << 1)
-                                | ((*bv.get_unchecked(indices[2] as usize + readbit_offset) as u8)
-                                    << 2)
-                                | ((*bv.get_unchecked(indices[3] as usize + readbit_offset) as u8)
-                                    << 3)
-                                | ((*bv.get_unchecked(indices[4] as usize + readbit_offset) as u8)
-                                    << 4)
-                                | ((*bv.get_unchecked(indices[5] as usize + readbit_offset) as u8)
-                                    << 5)
+                            (*bv.get_unchecked(indices[0] + readbit_offset) as u8)
+                                | ((*bv.get_unchecked(indices[1] + readbit_offset) as u8) << 1)
+                                | ((*bv.get_unchecked(indices[2] + readbit_offset) as u8) << 2)
+                                | ((*bv.get_unchecked(indices[3] + readbit_offset) as u8) << 3)
+                                | ((*bv.get_unchecked(indices[4] + readbit_offset) as u8) << 4)
+                                | ((*bv.get_unchecked(indices[5] + readbit_offset) as u8) << 5)
                         };
 
                         // println!("LUT input: {:?}", lut_input);
@@ -159,8 +154,8 @@ impl LUTNet {
         &self,
         cfg: &Configuration,
         bv: &mut BitVec<T, O>,
-        node_idxs_to_mutate: &Vec<usize>,
-        new_luts: &Vec<u64>,
+        node_idxs_to_mutate: &[usize],
+        new_luts: &[u64],
     ) -> Vec<Node>
     where
         T: BitStore,
@@ -179,12 +174,12 @@ impl LUTNet {
                     let node = &nodes_to_iterate[node_idx];
                     let indices = node.indices;
                     let lut_input = unsafe {
-                        (*bv.get_unchecked(indices[0] as usize + readbit_offset) as u8)
-                            | ((*bv.get_unchecked(indices[1] as usize + readbit_offset) as u8) << 1)
-                            | ((*bv.get_unchecked(indices[2] as usize + readbit_offset) as u8) << 2)
-                            | ((*bv.get_unchecked(indices[3] as usize + readbit_offset) as u8) << 3)
-                            | ((*bv.get_unchecked(indices[4] as usize + readbit_offset) as u8) << 4)
-                            | ((*bv.get_unchecked(indices[5] as usize + readbit_offset) as u8) << 5)
+                        (*bv.get_unchecked(indices[0] + readbit_offset) as u8)
+                            | ((*bv.get_unchecked(indices[1] + readbit_offset) as u8) << 1)
+                            | ((*bv.get_unchecked(indices[2] + readbit_offset) as u8) << 2)
+                            | ((*bv.get_unchecked(indices[3] + readbit_offset) as u8) << 3)
+                            | ((*bv.get_unchecked(indices[4] + readbit_offset) as u8) << 4)
+                            | ((*bv.get_unchecked(indices[5] + readbit_offset) as u8) << 5)
                     };
 
                     // println!("LUT input: {:?}", lut_input);
@@ -227,7 +222,7 @@ mod tests {
     #[test]
     fn random_lutnet_created_correctly() {
         let arch_name = "random";
-        let architecture = Architecture::from_str(&arch_name)
+        let architecture = Architecture::from_str(arch_name)
             .expect("Could not create architecture in span creation test");
         let (cfg, ltnet) = architecture.build();
         for layer in 0..cfg.derived.num_layers {
@@ -254,7 +249,7 @@ mod tests {
     #[test]
     fn gate_application_works_correctly() {
         let arch_name = "random";
-        let architecture = Architecture::from_str(&arch_name)
+        let architecture = Architecture::from_str(arch_name)
             .expect("Could not create architecture in span creation test");
         let (cfg, ltnet) = architecture.build();
         let (databits, _) = csv_to_bitvec(cfg).unwrap();

@@ -14,9 +14,7 @@ pub fn get_labels(cfg: &Configuration, dbv: &BitVec<u8, Msb0>) -> Vec<usize> {
                 .output_embedding
                 .iter()
                 .enumerate()
-                .min_by_key(|&(_index, &val)| {
-                    (chunk.load_be::<usize>() ^ val as usize).count_ones()
-                })
+                .min_by_key(|&(_index, &val)| (chunk.load_be::<usize>() ^ val).count_ones())
                 .map(|(index, _val)| index)
                 .unwrap()
         })

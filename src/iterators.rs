@@ -99,7 +99,7 @@ impl<'a> LayerGateIterator<'a> {
         LayerGateIterator {
             node_index: cfg.derived.layer_edges[layer],
             img_num_in_batch: 0,
-            layer: layer,
+            layer,
             bitvec_index: cfg.derived.batch_bitcount
                 + (cfg.data.batch_size * cfg.derived.layer_edges[layer]),
             max_bitvec_index: cfg.derived.batch_bitcount
@@ -179,7 +179,7 @@ pub struct SpanGenerator {
     finished: bool,
 }
 
-impl<'a> SpanGenerator {
+impl SpanGenerator {
     pub fn new(
         offset: usize,
         dim1: usize,
@@ -279,18 +279,18 @@ impl Iterator for SpanGenerator {
     }
     fn size_hint(&self) -> (usize, Option<usize>) {
         // This is exactly the number of iterations remaining
-        let remaining = ((self.dim1 - self.len1 - self.x + 2 * self.hop1 - 1) / self.hop1) as usize
-            * ((self.dim2 - self.len2 - self.y + 2 * self.hop2 - 1) / self.hop2) as usize
-            * ((self.dim3 - self.len3 - self.z + 2 * self.hop3 - 1) / self.hop3) as usize;
+        let remaining = ((self.dim1 - self.len1 - self.x + 2 * self.hop1 - 1) / self.hop1)
+            * ((self.dim2 - self.len2 - self.y + 2 * self.hop2 - 1) / self.hop2)
+            * ((self.dim3 - self.len3 - self.z + 2 * self.hop3 - 1) / self.hop3);
         (remaining, Some(remaining))
     }
 }
 
 impl ExactSizeIterator for SpanGenerator {
     fn len(&self) -> usize {
-        ((self.dim1 - self.len1 - self.x + 2 * self.hop1 - 1) / self.hop1) as usize
-            * ((self.dim2 - self.len2 - self.y + 2 * self.hop2 - 1) / self.hop2) as usize
-            * ((self.dim3 - self.len3 - self.z + 2 * self.hop3 - 1) / self.hop3) as usize
+        ((self.dim1 - self.len1 - self.x + 2 * self.hop1 - 1) / self.hop1)
+            * ((self.dim2 - self.len2 - self.y + 2 * self.hop2 - 1) / self.hop2)
+            * ((self.dim3 - self.len3 - self.z + 2 * self.hop3 - 1) / self.hop3)
     }
 }
 

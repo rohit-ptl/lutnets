@@ -9,14 +9,15 @@ pub struct Ci2Settings {
     pub output_embedding: Vec<usize>,
     pub layer_sizes: Vec<usize>,
     pub lut_bank_size: usize,
-    pub layer_span_details: Vec<((usize, usize, usize), (usize, usize, usize))>,
+    pub layer_span_details: Vec<[usize; 10]>,
 }
 
 impl Ci2Settings {
     pub fn new() -> Result<Self, ConfigError> {
         let manifest_dir = env!("CARGO_MANIFEST_DIR");
         let mut settings_path = PathBuf::from(manifest_dir);
-        settings_path.push("src/architectures/cnn_iv0/Settings.toml");
+        settings_path.push("src/architectures/cnn_iv2/Settings.toml");
+        println!("{:?}", settings_path);
 
         let s = Config::builder()
             .add_source(File::from(settings_path))

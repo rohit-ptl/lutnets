@@ -65,7 +65,6 @@ impl DerivedValues {
             cumulative_sum += size;
             layer_edges.push(cumulative_sum);
         }
-
         let network_size: usize = network.layer_sizes.iter().sum();
         let bitvec_size = data.batch_size * (img_bitcount + network_size);
         let bitvec_edges: Vec<usize> = layer_edges.iter().map(|&x| x * data.batch_size).collect();

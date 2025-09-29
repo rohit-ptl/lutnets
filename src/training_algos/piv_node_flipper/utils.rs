@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 //not all these functions are useful, and sorry about lack of comments.
 
 pub fn find_most_frequent_pivotal_node(
-    pivotal_nodes: &Vec<HashMap<usize, HashSet<usize>>>,
+    pivotal_nodes: &[HashMap<usize, HashSet<usize>>],
 ) -> Vec<HashMap<usize, HashSet<usize>>> {
     pivotal_nodes
         .iter()
@@ -34,7 +34,7 @@ pub fn find_most_frequent_pivotal_node(
 }
 
 pub fn find_randomized_selections(
-    pivotal_nodes: &Vec<HashMap<usize, HashSet<usize>>>,
+    pivotal_nodes: &[HashMap<usize, HashSet<usize>>],
 ) -> Vec<HashMap<usize, usize>> {
     pivotal_nodes
         .iter()
@@ -92,7 +92,7 @@ pub fn find_randomized_selections(
 
 pub fn find_pivotal_node_with_scoring(
     cfg: &Configuration,
-    pivotal_nodes: &Vec<HashMap<usize, HashSet<usize>>>,
+    pivotal_nodes: &[HashMap<usize, HashSet<usize>>],
     flags: &BitVec<u8, Msb0>,
 ) -> Vec<usize> {
     pivotal_nodes
@@ -123,7 +123,7 @@ pub fn find_pivotal_node_with_scoring(
 
 pub fn find_pivotal_nodes_by_key(
     cfg: &Configuration,
-    pivotal_nodes: &Vec<HashMap<usize, HashSet<usize>>>,
+    pivotal_nodes: &[HashMap<usize, HashSet<usize>>],
     flags: &BitVec<u8, Msb0>,
 ) -> Vec<Option<usize>> {
     // Create a scoreboard for each key from 3706 to 3713. idx 0 is for key 3706, 1 for 3707, etc.
@@ -165,7 +165,7 @@ pub fn find_pivotal_nodes_by_key(
 
 pub fn find_global_pivotal_node(
     cfg: &Configuration,
-    pivotal_nodes: &Vec<HashMap<usize, HashSet<usize>>>,
+    pivotal_nodes: &[HashMap<usize, HashSet<usize>>],
     flags: &BitVec<u8, Msb0>,
 ) -> Option<usize> {
     let mut global_node_scores: HashMap<usize, isize> = HashMap::new();
@@ -194,7 +194,7 @@ pub fn find_global_pivotal_node(
 
 pub fn score_lut_by_node_presence(
     cfg: &Configuration,
-    pivotal_nodes: &Vec<HashMap<usize, HashSet<usize>>>,
+    pivotal_nodes: &[HashMap<usize, HashSet<usize>>],
     flags: &BitVec<u8, Msb0>,
     lut_inputs: &[u8],
     node_idx: usize,

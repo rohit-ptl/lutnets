@@ -66,7 +66,7 @@ pub fn create_pseudorandom_lut_generator(
             16 => Box::new(std::iter::repeat(()).flat_map(move |_| {
                 let chunk = rng_luts.next_u64();
                 let items: [u64; 16] =
-                    std::array::from_fn(|i| ltbank[((chunk >> (i * 4)) & 0xF) as usize].clone());
+                    std::array::from_fn(|i| ltbank[((chunk >> (i * 4)) & 0xF) as usize]);
                 items.into_iter()
             })),
 
@@ -74,7 +74,7 @@ pub fn create_pseudorandom_lut_generator(
                 let chunk = rng_luts.next_u64();
                 let items: [u64; 8] = std::array::from_fn(|i| {
                     let index = ((chunk >> (i * 8)) & 0xFF) as usize;
-                    ltbank[index].clone()
+                    ltbank[index]
                 });
                 items.into_iter()
             })),
@@ -108,7 +108,7 @@ pub fn pseudo_8bit_generator() -> impl Iterator<Item = u8> {
     let mut rng = Xoshiro256PlusPlus::from_rng(&mut rand::rng());
     std::iter::repeat(()).flat_map(move |_| {
         let chunk = rng.next_u64();
-        (0..8).map(move |i| (chunk >> (i * 8)) as u8 & 0xFF)
+        (0..8).map(move |i| (chunk >> (i * 8)) as u8)
     })
 }
 
