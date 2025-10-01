@@ -4,7 +4,7 @@ dim2 = 28
 dim3 = 28
 train_filepath = "mnist_data_csv/mnist_train.csv"
 test_filepath = "mnist_data_csv/mnist_test.csv"
-datasplit = { "Train" = 10000 }
+datasplit = { "Train" = 5000 }
 batch_size = 1000
 
 # The network settings should mostly be overwritten by the architecture. This is just legacy stuff.

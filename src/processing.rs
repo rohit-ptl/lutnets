@@ -1,5 +1,7 @@
 use crate::settings::*;
 use bitvec::prelude::*;
+use cached::proc_macro::cached;
+
 
 pub fn get_labels(cfg: &Configuration, dbv: &BitVec<u8, Msb0>) -> Vec<usize> {
     // Extract predicted labels from the final part of the bitvec
@@ -27,22 +29,10 @@ pub fn get_loss_vec(
     labels: &[usize],
 ) -> BitVec<u8, Msb0> {
     // Calculate loss vector as differing bits between predicted and true labels
-    let chunk_size = cfg.derived.output_bitsize;
     let predicted_label_bitslice = &dbv[cfg.derived.bitvec_size
         - cfg.data.batch_size * cfg.derived.output_bitsize
         ..cfg.derived.bitvec_size];
-    let mut true_label_bitslice = labels
-        .iter()
-        .map(|label_val| cfg.network.output_embedding[*label_val])
-        .fold(
-            BitVec::<u8, Msb0>::with_capacity(labels.len() * chunk_size),
-            |mut acc, embedding| {
-                // Get the bits and extend the accumulator. The borrow is temporary and safe.
-                let bits = embedding.view_bits::<Msb0>();
-                acc.extend_from_bitslice(&bits[usize::BITS as usize - chunk_size..]);
-                acc
-            },
-        );
+    let mut true_label_bitslice = get_true_label_bitslice(cfg, labels);
     true_label_bitslice ^= predicted_label_bitslice; // This is XOR between true labels and predicted labels, despite the name
     true_label_bitslice
 }
@@ -62,6 +52,32 @@ pub fn get_predicted_embedding(cfg: &Configuration, dbv: &BitVec<u8, Msb0>) -> V
         .map(|chunk| chunk.load_be::<u8>())
         .collect::<Vec<u8>>()
 }
+
+
+#[cached(
+    size = 50, // max 50 cached results
+    key = "Vec<usize>", 
+    convert = r#"{ labels.to_vec() }"#,
+)]
+fn get_true_label_bitslice(
+    cfg: &Configuration,
+    labels: &[usize],
+) -> BitVec<u8, Msb0> {
+    let chunk_size = cfg.derived.output_bitsize;
+    labels
+        .iter()
+        .map(|label_val| cfg.network.output_embedding[*label_val])
+        .fold(
+            BitVec::<u8, Msb0>::with_capacity(labels.len() * chunk_size),
+            |mut acc, embedding| {
+                // Get the bits and extend the accumulator. The borrow is temporary and safe.
+                let bits = embedding.view_bits::<Msb0>();
+                acc.extend_from_bitslice(&bits[usize::BITS as usize - chunk_size..]);
+                acc
+            },
+        )
+}
+
 
 #[cfg(test)]
 mod tests {
