@@ -1,5 +1,5 @@
 use crate::{
-    architectures::{LUTNetBuilder, cnn_iv2::settings::*},
+    architectures::{LUTNetBuilder, cnn_iv3::settings::*},
     iterators::*,
     lut_bank_creators::*,
     netcore::*,
@@ -8,7 +8,26 @@ use crate::{
 use rand::prelude::*;
 use rand_xoshiro::Xoshiro256PlusPlus;
 
-impl LUTNetBuilder for Ci2Settings {
+/// Extends a vector of nodes from an iterator that yields node indices.
+fn extend_nodes_from_iterator<I>(
+    nodes: &mut Vec<Node>,
+    iterator: I,
+    lut_bank: &Option<Vec<u64>>,
+    rng_luts: &mut Xoshiro256PlusPlus,
+) where
+    I: Iterator<Item = [usize; 6]>,
+{
+    nodes.extend(iterator.map(|indices| Node {
+        lut: if let Some(lut_bank) = lut_bank {
+            lut_bank[rng_luts.random_range(0..lut_bank.len())]
+        } else {
+            rng_luts.next_u64()
+        },
+        indices,
+    }));
+}
+
+impl LUTNetBuilder for Ci3Settings {
     fn build_net(&self) -> (&'static Configuration, LUTNet) {
         let cfg = get_cfg(self);
         let mut nodes: Vec<Node> = Vec::with_capacity(cfg.derived.network_size);
@@ -23,21 +42,34 @@ impl LUTNetBuilder for Ci2Settings {
         {
             let spiterator =
                 SpanGenerator::new(offset, dim1, dim2, dim3, len1, len2, len3, hop1, hop2, hop3);
-            // println!("iteratorlen: {}",spiterator.len());
-            nodes.extend(
-                spiterator
-                    .map(|indices| Node {
-                        lut: if let Some(lut_bank) = &lut_bank {
-                            lut_bank[rng_luts.random_range(0..lut_bank.len())]
-                        } else {
-                            rng_luts.next_u64()
-                        },
-                        indices,
-                    })
-                    .collect::<Vec<Node>>(),
-            );
+            // println!("Nodes len{:?}, spiterator len: {}",nodes.len(), spiterator.len());
+            extend_nodes_from_iterator(&mut nodes, spiterator, &lut_bank, &mut rng_luts);
         }
-        // println!("Num nodes: {:?}, Network len: {}",nodes.len(), cfg.derived.network_size);
+
+        let offset = cfg.derived.img_bitcount + cfg.derived.layer_edges[4];
+        // println!("Offset: {}", offset);
+        for _ in 0..cfg.derived.output_bitsize {
+            let headgen2 = HeadHelperGenerator::new(offset, 36, self.layer_sizes[4]);
+                        // println!("Nodes len {:?}, spiterator len: {}",nodes.len(), headgen2.len());
+            extend_nodes_from_iterator(&mut nodes, headgen2, &lut_bank, &mut rng_luts);
+
+        }
+        let offset = cfg.derived.img_bitcount + cfg.derived.layer_edges[5];
+                // println!("Offset: {}", offset);
+
+        let headgen1 = SlidingGenerator::new(offset, self.layer_sizes[6], self.layer_sizes[5], 6);
+                        // println!("Nodes leeen {:?}, spiterator len: {}",nodes.len(), headgen1.len());
+
+        extend_nodes_from_iterator(&mut nodes, headgen1, &lut_bank, &mut rng_luts);
+
+           let offset = cfg.derived.img_bitcount + cfg.derived.layer_edges[6];
+                //    println!("Offset: {}", offset);
+
+        let headgen0 = SlidingGenerator::new(offset, self.layer_sizes[7], self.layer_sizes[6], 6);
+                        // println!("Nodes leeen {:?}, spiterator len: {}",nodes.len(), headgen0.len());
+
+        extend_nodes_from_iterator(&mut nodes, headgen0, &lut_bank, &mut rng_luts);
+        // println!("Offset {}, Num nodes: {:?}, Network len: {}", offset, nodes.len(), cfg.derived.network_size);
         (
             cfg,
             LUTNet::new(
@@ -57,8 +89,8 @@ mod tests {
     use std::str::FromStr;
 
     #[test]
-    fn cnn_iv2_created_correctly() {
-        let arch_name = "cnn_iv2";
+    fn cnn_iv3_created_correctly() {
+        let arch_name = "cnn_iv3";
         let architecture = Architecture::from_str(arch_name)
             .expect("Could not create architecture in span creation test");
         let (cfg, ltnet) = architecture.build();

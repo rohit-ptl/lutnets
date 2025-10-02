@@ -1,4 +1,7 @@
 use crate::settings::*;
+use std::collections::HashSet;
+use rand::prelude::*;
+use rand_xoshiro::Xoshiro256PlusPlus;
 
 // These iterators contain a lot of the hard logic needed for forward pass and generating spans for CNN style networks
 
@@ -293,6 +296,148 @@ impl ExactSizeIterator for SpanGenerator {
             * ((self.dim3 - self.len3 - self.z + 2 * self.hop3 - 1) / self.hop3)
     }
 }
+
+// Iterator that helps generate the network head ----------------------------------------------------
+
+pub struct HeadHelperGenerator {
+    offset: usize,
+    n: usize,
+    d: usize,
+    current_lut: usize,
+    stride: usize,
+    rng: Xoshiro256PlusPlus,
+}
+
+impl HeadHelperGenerator {
+    pub fn new(offset: usize, n: usize, d: usize) -> Self {
+        assert!(d > 6, "Input dimension 'D' must be greater than 6.");
+        assert!(n > 2*(d/6+1), "Number of LUTs 'N' must be large enough to cover sliding and strided.");
+
+        let stride = (d / 6).max(1);
+        HeadHelperGenerator {
+            offset,
+            n,
+            d,
+            current_lut: 0,
+            stride,
+            rng: Xoshiro256PlusPlus::from_rng(&mut rand::rng())
+
+        }
+    }
+}
+
+impl Iterator for HeadHelperGenerator {
+    type Item = [usize; 6];
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current_lut >= self.n {
+            return None;
+        }
+
+        let sliding_count = (self.d as f64 / 6.0).ceil() as usize;
+        let strided_count = (self.d as f64 / 6.0).ceil() as usize;
+
+        let mut inputs = [0; 6];
+
+        if self.current_lut < sliding_count {
+            let phase_counter = self.current_lut;
+            let base_index = phase_counter * 6;
+
+            for i in 0..6 {
+                inputs[i] = self.offset + ((base_index + i) % self.d);
+            }
+        } else if self.current_lut < sliding_count + strided_count {
+            let phase_counter = self.current_lut - sliding_count;
+            let base_index = phase_counter;
+
+            for i in 0..6 {
+                inputs[i] = self.offset + ((base_index + i * self.stride) % self.d);
+            }
+        } else {
+            let mut selected_indices = HashSet::with_capacity(6);
+            while selected_indices.len() < 6 {
+                selected_indices.insert(self.rng.random_range(0..self.d));
+            }
+
+            let mut i = 0;
+            for &val in selected_indices.iter() {
+                inputs[i] = val;
+                i += 1;
+            }
+            inputs.iter_mut().for_each(|x| *x += self.offset);        }
+
+        self.current_lut += 1;
+        Some(inputs)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let remaining = self.len();
+        (remaining, Some(remaining))
+    }
+    
+}
+
+impl ExactSizeIterator for HeadHelperGenerator {
+    fn len(&self) -> usize {
+        // The number of remaining items is the total `n` minus how many we've already yielded.
+        self.n.saturating_sub(self.current_lut)
+    }
+}
+
+
+
+// Iterator to generate LUTs using a simple non-intersecting1 sliding window........................
+
+pub struct SlidingGenerator {
+    offset: usize,
+    n: usize,
+    d: usize,
+    current_lut: usize,
+    hop: usize,
+}
+
+impl SlidingGenerator {
+    pub fn new(offset: usize, n: usize, d: usize, hop: usize) -> Self {
+        assert!(d > 6, "Input dimension 'D' must be greater than 6.");
+        assert!(hop > 0, "Hop size must be greater than 0.");
+        SlidingGenerator {
+            offset,
+            n,
+            d,
+            current_lut: 0,
+            hop,
+        }
+    }
+}
+
+impl Iterator for SlidingGenerator {
+    type Item = [usize; 6];
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current_lut >= self.n {
+            return None;
+        }
+        let mut inputs = [0; 6];
+        let base_index = self.current_lut * self.hop;
+        for i in 0..6 {
+            inputs[i] = self.offset + ((base_index + i) % self.d);
+        }
+        self.current_lut += 1;
+        Some(inputs)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let remaining = self.len();
+        (remaining, Some(remaining))
+    }
+    
+}
+
+impl ExactSizeIterator for SlidingGenerator {
+    fn len(&self) -> usize {
+        self.n.saturating_sub(self.current_lut)
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
