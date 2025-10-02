@@ -8,7 +8,7 @@ pub fn load_model_from_file(model_filename: &str) -> (&'static Configuration, LU
             &model_filename
         );
     }
-    let mut file = File::open(&model_filename).expect("Model file exists, but unable to open it.");
+    let mut file = File::open(model_filename).expect("Model file exists, but unable to open it.");
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)
         .expect("Model file opened, but unable to read it.");

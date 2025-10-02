@@ -9,4 +9,4 @@ pub mod settings;
 pub mod training_algos;
 pub mod utils;
 
-pub const HOME_DIR: &'static str = env!("CARGO_MANIFEST_DIR");
+pub const HOME_DIR: &str = env!("CARGO_MANIFEST_DIR");

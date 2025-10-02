@@ -4,14 +4,14 @@ dim2 = 28
 dim3 = 28
 train_filepath = "mnist_data_csv/mnist_train.csv"
 test_filepath = "mnist_data_csv/mnist_test.csv"
-datasplit = { "Train" = 50000 }
-batch_size = 10000
+datasplit = { "Train" = 5000 }
+batch_size = 1000
 
 # The network settings should mostly be overwritten by the architecture. This is just legacy stuff.
 [network]
 output_embedding = [51, 15, 77, 85, 240, 170, 153, 204, 102, 210]
 # If you are using init_spanned the layer_sizes must match the span dimensions in /architectures/cnn_iv0/Settings.toml
-layer_sizes = [2352, 756, 351, 156, 66, 25, 8]
-#layer_sizes = [2352, 756, 8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8]
+#layer_sizes = [2352, 756, 351, 156, 66, 25, 8]
+layer_sizes = [2352, 756, 8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8]
 # layer_sizes = [65536, 32768, 8192, 4096, 1024, 256, 64, 16, 8]
 lut_bank_size = 0

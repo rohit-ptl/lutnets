@@ -23,6 +23,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Parse the arguments and load the mode. This code is exposed here because various algoritms may need additional arguments.
     match (args.a, args.f) {
         (Some(arch_name), Some(model_file_base)) => {
+            println!("{:?}", arch_name);
             let arch = Architecture::from_str(&arch_name)?;
             (cfg, ltnet) = arch.build();
             model_filename = format!("{}.ltnet", model_file_base);
@@ -56,7 +57,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     ltnet.verify_lut_bank_integrity();
     train(
         &mut ltnet,
-        &cfg,
+        cfg,
         &databits,
         &labels,
         0.02,

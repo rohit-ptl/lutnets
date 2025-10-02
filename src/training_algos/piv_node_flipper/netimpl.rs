@@ -34,12 +34,12 @@ impl LUTNet {
                         .expect("Error: Invalid node index {}");
                     let indices = node.indices;
                     let lut_input = unsafe {
-                        (*bv.get_unchecked(indices[0] as usize + readbit_offset) as u8)
-                            | ((*bv.get_unchecked(indices[1] as usize + readbit_offset) as u8) << 1)
-                            | ((*bv.get_unchecked(indices[2] as usize + readbit_offset) as u8) << 2)
-                            | ((*bv.get_unchecked(indices[3] as usize + readbit_offset) as u8) << 3)
-                            | ((*bv.get_unchecked(indices[4] as usize + readbit_offset) as u8) << 4)
-                            | ((*bv.get_unchecked(indices[5] as usize + readbit_offset) as u8) << 5)
+                        (*bv.get_unchecked(indices[0] + readbit_offset) as u8)
+                            | ((*bv.get_unchecked(indices[1] + readbit_offset) as u8) << 1)
+                            | ((*bv.get_unchecked(indices[2] + readbit_offset) as u8) << 2)
+                            | ((*bv.get_unchecked(indices[3] + readbit_offset) as u8) << 3)
+                            | ((*bv.get_unchecked(indices[4] + readbit_offset) as u8) << 4)
+                            | ((*bv.get_unchecked(indices[5] + readbit_offset) as u8) << 5)
                     };
                     let output_bit = ((node.lut >> lut_input) & 1) != 0;
                     results.push((bitvec_index, output_bit));
@@ -47,9 +47,8 @@ impl LUTNet {
                         let mut current_node_deps = HashSet::new();
                         let mut pivotal_node_occurences_local: HashMap<usize, HashSet<usize>> =
                             HashMap::new(); // this set tracks, for all the inputs to the current node, a reverse lookup of which pivotal nodes affect which input bits in cases where nodes affect multiple input bits
-                        for i in 0..6 {
-                            let curr_input_node_idx =
-                                (indices[i] - cfg.derived.img_bitcount) as usize;
+                        for (i, &idx) in indices.iter().enumerate() {
+                            let curr_input_node_idx = idx - cfg.derived.img_bitcount;
                             let mutated_input = lut_input ^ (1 << i);
                             let mutated_output_bit = ((node.lut >> mutated_input) & 1) != 0;
                             let curr_input_node_piv_set = pivotal_nodes_sets[img_num_in_batch]

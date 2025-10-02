@@ -8,7 +8,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("LUTNets Reference Example");
     // let cfg = get_cfg(None);
     let arch_name = "random";
-    let architecture = Architecture::from_str(&arch_name)?;
+    let architecture = Architecture::from_str(arch_name)?;
     let (cfg, ltnet) = architecture.build();
 
     println!(
